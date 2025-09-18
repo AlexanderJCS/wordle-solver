@@ -72,6 +72,8 @@ class Wordle:
             elif guessed_letter.result == GuessResult.GRAY:
                 if guessed_letter.letter in word_chars:
                     return False
+        
+        return True
     
     def possible_words(self) -> list[str]:
         possible = []
@@ -80,13 +82,18 @@ class Wordle:
                 continue
             if all(self._matches_guess(word, guess) for guess in self.guesses):
                 possible.append(word)
+        
+        return possible
     
 
 def main():
     with open("dictionary.txt") as f:
         dictionary = f.read().splitlines()
     
-    print(Wordle("beats", dictionary).make_guess("baees"))
+    w = Wordle("beats", dictionary)
+    w.make_guess("beaut")
+    
+    print(w.possible_words())
 
 
 if __name__ == "__main__":
