@@ -5,6 +5,9 @@ from typing import Optional
 
 from tqdm import tqdm
 
+import colorama
+
+colorama.init(autoreset=True)
 
 class GuessResult(Enum):
     GREEN = "green"
@@ -16,11 +19,28 @@ class GuessResult(Enum):
 class GuessedLetter:
     letter: str
     result: GuessResult
+    
+    def __str__(self):
+        cmap = {
+            GuessResult.GREEN: colorama.Back.GREEN + colorama.Fore.BLACK,
+            GuessResult.YELLOW: colorama.Back.YELLOW + colorama.Fore.BLACK,
+            GuessResult.GRAY: colorama.Back.WHITE + colorama.Fore.BLACK,
+        }
+        
+        return f"{cmap[self.result]} {self.letter.upper()} {colorama.Style.RESET_ALL}"
 
 
 @dataclass(frozen=True)
 class Guess:
     letters: list[GuessedLetter]
+    
+    def __str__(self):
+        display = ""
+        
+        for letter in self.letters:
+            display += str(letter)
+            
+        return display
 
 
 class Wordle:
@@ -29,6 +49,7 @@ class Wordle:
         self.dictionary = dictionary
         self.guesses: list[Guess] = []
         self.max_attempts = 6
+        self._possible_cache: Optional[list[str]] = None
 
     def suppose_guess(self, solution: str, guess_word: str):
         if len(self.guesses) >= self.max_attempts:
@@ -59,6 +80,7 @@ class Wordle:
 
     def make_guess(self, guess_word: str):
         self.guesses.append(self.suppose_guess(self.solution, guess_word))
+        self._possible_cache = None
 
     def is_solved(self) -> bool:
         return any(all(letter.result == GuessResult.GREEN for letter in guess.letters) for guess in self.guesses)
@@ -88,12 +110,17 @@ class Wordle:
         return all(result[i] == guess.letters[i].result for i in range(len(result)))
 
     def possible_words(self) -> list[str]:
+        if self._possible_cache is not None:
+            return self._possible_cache
+        
         possible = []
         for word in self.dictionary:
             if len(word) != len(self.solution):
                 continue
             if all(self._matches_guess(word, guess) for guess in self.guesses):
                 possible.append(word)
+        
+        self._possible_cache = possible
         
         return possible
 
@@ -117,7 +144,7 @@ class Wordle:
         best_entropy = -1.0
         best_word = None
 
-        for word in tqdm(self.dictionary):
+        for word in self.possible_words():
             if len(word) != len(self.solution):
                 continue
             entropy = self.entropy_of_guess(word)
@@ -127,15 +154,28 @@ class Wordle:
 
         return best_word
     
+    def __str__(self):
+        display = ""
+        
+        for i, guess in enumerate(self.guesses):
+            display += str(guess)
+            if i < len(self.guesses) - 1:
+                display += "\n"
+
+        return display
+
 
 def main():
     with open("dictionary.txt") as f:
         dictionary = f.read().splitlines()
     
-    w = Wordle("beats", dictionary)
-    w.make_guess("beaut")
+    w = Wordle("knife", dictionary)
+    w.make_guess("tares")
+    while len(w.guesses) < w.max_attempts and not w.is_solved():
+        w.make_guess(w.best_word())
+        print(f"Guessed word {len(w.guesses)}/{w.max_attempts}:")
 
-    print(w.best_word())
+    print(str(w))
 
 
 if __name__ == "__main__":
