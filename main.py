@@ -140,7 +140,7 @@ class Wordle:
 
         return entropy
 
-    def best_word(self) -> Optional[str]:
+    def best_word(self) -> tuple[Optional[str], float]:
         best_entropy = -1.0
         best_word = None
 
@@ -152,7 +152,7 @@ class Wordle:
                 best_entropy = entropy
                 best_word = word
 
-        return best_word
+        return best_word, best_entropy
     
     def __str__(self):
         display = ""
@@ -172,8 +172,13 @@ def main():
     w = Wordle("knife", dictionary)
     w.make_guess("tares")
     while len(w.guesses) < w.max_attempts and not w.is_solved():
-        w.make_guess(w.best_word())
-        print(f"Guessed word {len(w.guesses)}/{w.max_attempts}:")
+        word, entropy = w.best_word()
+        if word is None:
+            print("No possible words left!")
+            break
+        
+        print(f"Guess {len(w.guesses) + 1}/{w.max_attempts}: {word} (entropy: {entropy:.3f} bits)")
+        w.make_guess(word)
 
     print(str(w))
 
