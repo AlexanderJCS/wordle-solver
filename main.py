@@ -124,17 +124,35 @@ class Wordle:
         
         return possible
 
+    @staticmethod
+    def pattern_index(pattern: tuple[GuessResult, ...]) -> int:
+        index = 0
+        for i, result in enumerate(pattern):
+            multiplier = 0
+            if result == GuessResult.YELLOW:
+                multiplier = 1
+            elif result == GuessResult.GREEN:
+                multiplier = 2
+            else:
+                continue
+
+            index += (3 ** i) * multiplier
+        return index
+
     def entropy_of_guess(self, guess_word: str) -> float:
-        pattern_counts = {}
+        patterns = [0 for _ in range(3 ** len(self.solution))]
 
         for possible_word in self.possible_words():
             simulated_guess = self.suppose_guess(possible_word, guess_word)
             pattern = tuple(letter.result for letter in simulated_guess.letters)
-            pattern_counts[pattern] = pattern_counts.get(pattern, 0) + 1
+            patterns[self.pattern_index(pattern)] += 1
 
         total_possible = len(self.possible_words())
         entropy = 0.0
-        for count in pattern_counts.values():
+        for count in patterns:
+            if count == 0:
+                continue
+
             probability = count / total_possible
             entropy -= probability * log2(probability)
 
@@ -144,7 +162,7 @@ class Wordle:
         best_entropy = -1.0
         best_word = None
 
-        for word in self.possible_words():
+        for word in tqdm(self.possible_words()):
             if len(word) != len(self.solution):
                 continue
             entropy = self.entropy_of_guess(word)
@@ -170,17 +188,20 @@ def main():
         dictionary = f.read().splitlines()
     
     w = Wordle("knife", dictionary)
-    w.make_guess("tares")
-    while len(w.guesses) < w.max_attempts and not w.is_solved():
-        word, entropy = w.best_word()
-        if word is None:
-            print("No possible words left!")
-            break
-        
-        print(f"Guess {len(w.guesses) + 1}/{w.max_attempts}: {word} (entropy: {entropy:.3f} bits)")
-        w.make_guess(word)
 
-    print(str(w))
+    print("Best starting word:", w.best_word())
+
+    # w.make_guess("tares")
+    # while len(w.guesses) < w.max_attempts and not w.is_solved():
+    #     word, entropy = w.best_word()
+    #     if word is None:
+    #         print("No possible words left!")
+    #         break
+    #
+    #     print(f"Guess {len(w.guesses) + 1}/{w.max_attempts}: {word} (entropy: {entropy:.3f} bits)")
+    #     w.make_guess(word)
+    #
+    # print(str(w))
 
 
 if __name__ == "__main__":
