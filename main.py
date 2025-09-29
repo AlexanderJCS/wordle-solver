@@ -187,21 +187,21 @@ def main():
     with open("dictionary.txt") as f:
         dictionary = f.read().splitlines()
     
-    w = Wordle("knife", dictionary)
+    w = Wordle("civil", dictionary)
 
-    print("Best starting word:", w.best_word())
+    # print("Best starting word:", w.best_word())
 
-    # w.make_guess("tares")
-    # while len(w.guesses) < w.max_attempts and not w.is_solved():
-    #     word, entropy = w.best_word()
-    #     if word is None:
-    #         print("No possible words left!")
-    #         break
-    #
-    #     print(f"Guess {len(w.guesses) + 1}/{w.max_attempts}: {word} (entropy: {entropy:.3f} bits)")
-    #     w.make_guess(word)
-    #
-    # print(str(w))
+    w.make_guess("tares")
+    while len(w.guesses) < w.max_attempts and not w.is_solved():
+        word, entropy = w.best_word()
+        if word is None:
+            print("No possible words left!")
+            break
+
+        print(f"Guess {len(w.guesses) + 1}/{w.max_attempts}: {word} (entropy: {entropy:.3f} bits)")
+        w.make_guess(word)
+
+    print(str(w))
 
 
 if __name__ == "__main__":
