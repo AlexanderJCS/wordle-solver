@@ -6,8 +6,13 @@ from typing import Optional
 from tqdm import tqdm
 
 import colorama
+import numpy as np
+
+import pickle
+import os
 
 colorama.init(autoreset=True)
+
 
 class GuessResult(Enum):
     GREEN = "green"
@@ -41,15 +46,26 @@ class Guess:
             display += str(letter)
             
         return display
+    
+    def pattern(self):
+        return tuple(letter.result for letter in self.letters)
 
 
 class Wordle:
-    def __init__(self, solution: str, dictionary: list[str]):
+    def __init__(self, solution: str, dictionary: list[str], cache_loc="pattern_lut_cache.pickle"):
         self.solution = solution
         self.dictionary = dictionary
         self.guesses: list[Guess] = []
         self.max_attempts = 6
-        self._possible_cache: Optional[list[str]] = None
+        self._possible_cache: Optional[list[tuple[int, str]]] = None
+        
+        if os.path.exists(cache_loc):
+            with open(cache_loc, "rb") as f:
+                self.pattern_lut = pickle.load(f)
+        else:
+            self.pattern_lut = self.gen_pattern_lut()
+            with open(cache_loc, "wb") as f:
+                pickle.dump(self.pattern_lut, f)
 
     def suppose_guess(self, solution: str, guess_word: str):
         if len(self.guesses) >= self.max_attempts:
@@ -109,16 +125,16 @@ class Wordle:
         # compare simulated result to stored guess result
         return all(result[i] == guess.letters[i].result for i in range(len(result)))
 
-    def possible_words(self) -> list[str]:
+    def possible_words(self) -> list[tuple[int, str]]:
         if self._possible_cache is not None:
             return self._possible_cache
         
         possible = []
-        for word in self.dictionary:
+        for idx, word in enumerate(self.dictionary):
             if len(word) != len(self.solution):
                 continue
             if all(self._matches_guess(word, guess) for guess in self.guesses):
-                possible.append(word)
+                possible.append((idx, word))
         
         self._possible_cache = possible
         
@@ -139,13 +155,21 @@ class Wordle:
             index += (3 ** i) * multiplier
         return index
 
-    def entropy_of_guess(self, guess_word: str) -> float:
+    def gen_pattern_lut(self):
+        lut = np.zeros((len(self.dictionary), len(self.dictionary)), dtype=np.uint8)
+        
+        for i, solution_word in enumerate(tqdm(self.dictionary)):
+            for j, guess_word in enumerate(self.dictionary):
+                guess_result = self.suppose_guess(solution_word, guess_word)
+                lut[i][j] = self.pattern_index(guess_result.pattern())
+        
+        return lut
+
+    def entropy_of_guess(self, guess_idx: int) -> float:
         patterns = [0 for _ in range(3 ** len(self.solution))]
 
-        for possible_word in self.possible_words():
-            simulated_guess = self.suppose_guess(possible_word, guess_word)
-            pattern = tuple(letter.result for letter in simulated_guess.letters)
-            patterns[self.pattern_index(pattern)] += 1
+        for word_idx, _ in self.possible_words():
+            patterns[self.pattern_lut[word_idx][guess_idx]] += 1
 
         total_possible = len(self.possible_words())
         entropy = 0.0
@@ -162,10 +186,11 @@ class Wordle:
         best_entropy = -1.0
         best_word = None
 
-        for word in tqdm(self.possible_words()):
+        for word_idx, word in tqdm(self.possible_words()):
             if len(word) != len(self.solution):
                 continue
-            entropy = self.entropy_of_guess(word)
+            
+            entropy = self.entropy_of_guess(word_idx)
             if entropy > best_entropy:
                 best_entropy = entropy
                 best_word = word
@@ -191,7 +216,7 @@ def main():
 
     # print("Best starting word:", w.best_word())
 
-    w.make_guess("tares")
+    # w.make_guess("tares")
     while len(w.guesses) < w.max_attempts and not w.is_solved():
         word, entropy = w.best_word()
         if word is None:
