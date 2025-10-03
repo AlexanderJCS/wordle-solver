@@ -186,11 +186,13 @@ class Wordle:
         best_entropy = -1.0
         best_word = None
 
-        for word_idx, word in tqdm(self.possible_words()):
+        for word_idx, word in enumerate(tqdm(self.dictionary)):
             if len(word) != len(self.solution):
                 continue
             
             entropy = self.entropy_of_guess(word_idx)
+            if entropy > -1:
+                print(entropy, word)
             if entropy > best_entropy:
                 best_entropy = entropy
                 best_word = word
@@ -217,6 +219,9 @@ def main():
     # print("Best starting word:", w.best_word())
 
     # w.make_guess("tares")
+    w.make_guess("tares")
+    w.make_guess("colin")
+    w.make_guess("aahed")
     while len(w.guesses) < w.max_attempts and not w.is_solved():
         word, entropy = w.best_word()
         if word is None:
