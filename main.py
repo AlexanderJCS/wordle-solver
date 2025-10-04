@@ -181,7 +181,7 @@ class Wordle:
 
         return entropy
 
-    def best_word(self) -> tuple[Optional[str], float]:
+    def best_word(self, progress=True) -> tuple[Optional[str], float]:
         best_entropy = -1.0
         best_word = None
         
@@ -190,8 +190,8 @@ class Wordle:
         search_space = self.possible_words() if search_possible_words else enumerate(self.dictionary)
         search_space_len = len(self.possible_words()) if search_possible_words else len(self.dictionary)
 
-        for word_idx, word in tqdm(search_space, total=search_space_len):
-            print(word_idx, word)
+        it = tqdm(search_space, total=search_space_len) if progress else search_space
+        for word_idx, word in it:
             if len(word) != len(self.solution):
                 continue
             
