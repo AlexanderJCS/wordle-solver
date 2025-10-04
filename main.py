@@ -185,7 +185,7 @@ class Wordle:
         best_entropy = -1.0
         best_word = None
         
-        search_possible_words = len(self.possible_words()) / len(self.dictionary) < 0.1
+        search_possible_words = len(self.possible_words()) < 50
         
         search_space = self.possible_words() if search_possible_words else enumerate(self.dictionary)
         search_space_len = len(self.possible_words()) if search_possible_words else len(self.dictionary)
@@ -195,7 +195,7 @@ class Wordle:
             if len(word) != len(self.solution):
                 continue
             
-            entropy = self.entropy_of_guess(word_idx, len(search_space))
+            entropy = self.entropy_of_guess(word_idx, search_space_len)
             if entropy > best_entropy:
                 best_entropy = entropy
                 best_word = word
