@@ -165,19 +165,18 @@ class Wordle:
         
         return lut
 
-    def entropy_of_guess(self, guess_idx: int) -> float:
+    def entropy_of_guess(self, guess_idx: int, search_space_size: int) -> float:
         patterns = [0 for _ in range(3 ** len(self.solution))]
 
         for word_idx, _ in self.possible_words():
             patterns[self.pattern_lut[word_idx][guess_idx]] += 1
 
-        total_possible = len(self.possible_words())
         entropy = 0.0
         for count in patterns:
             if count == 0:
                 continue
 
-            probability = count / total_possible
+            probability = count / search_space_size
             entropy -= probability * log2(probability)
 
         return entropy
@@ -185,14 +184,18 @@ class Wordle:
     def best_word(self) -> tuple[Optional[str], float]:
         best_entropy = -1.0
         best_word = None
+        
+        search_possible_words = len(self.possible_words()) / len(self.dictionary) < 0.1
+        
+        search_space = self.possible_words() if search_possible_words else enumerate(self.dictionary)
+        search_space_len = len(self.possible_words()) if search_possible_words else len(self.dictionary)
 
-        for word_idx, word in enumerate(tqdm(self.dictionary)):
+        for word_idx, word in tqdm(search_space, total=search_space_len):
+            print(word_idx, word)
             if len(word) != len(self.solution):
                 continue
             
-            entropy = self.entropy_of_guess(word_idx)
-            if entropy > -1:
-                print(entropy, word)
+            entropy = self.entropy_of_guess(word_idx, len(search_space))
             if entropy > best_entropy:
                 best_entropy = entropy
                 best_word = word
@@ -218,10 +221,7 @@ def main():
 
     # print("Best starting word:", w.best_word())
 
-    # w.make_guess("tares")
     w.make_guess("tares")
-    w.make_guess("colin")
-    w.make_guess("aahed")
     while len(w.guesses) < w.max_attempts and not w.is_solved():
         word, entropy = w.best_word()
         if word is None:
